@@ -4,7 +4,7 @@ import { CURRENCIES } from '@/types';
 const STORAGE_KEY = 'selected_currency';
 
 export function useCurrency() {
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('EGP');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

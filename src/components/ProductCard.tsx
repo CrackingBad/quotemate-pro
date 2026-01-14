@@ -22,9 +22,11 @@ interface ProductCardProps {
   onDelete: (id: string) => void;
   onAddToQuotation?: (product: Product) => void;
   showAddButton?: boolean;
+  categories?: string[];
+  onAddCategory?: (category: string) => boolean;
 }
 
-export function ProductCard({ product, onUpdate, onDelete, onAddToQuotation, showAddButton }: ProductCardProps) {
+export function ProductCard({ product, onUpdate, onDelete, onAddToQuotation, showAddButton, categories = [], onAddCategory }: ProductCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showImageZoom, setShowImageZoom] = useState(false);
 
@@ -129,6 +131,8 @@ export function ProductCard({ product, onUpdate, onDelete, onAddToQuotation, sho
             setIsEditing(false);
           }}
           onClose={() => setIsEditing(false)}
+          categories={categories}
+          onAddCategory={onAddCategory || (() => false)}
         />
       )}
 

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Product, QuotationItem, CompanyInfo, QuotationTemplate, UNIT_TYPES, CURRENCIES, PRODUCT_CATEGORIES } from '@/types';
+import { Product, QuotationItem, CompanyInfo, QuotationTemplate, UNIT_TYPES, CURRENCIES } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { downloadQuotationPDF } from '@/lib/pdf';
@@ -41,7 +41,7 @@ export function QuotationBuilder({
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [customerName, setCustomerName] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('EGP');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showProductPicker, setShowProductPicker] = useState(false);
@@ -344,9 +344,9 @@ export function QuotationBuilder({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All categories</SelectItem>
-                    {PRODUCT_CATEGORIES.map(cat => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
+                    {[...new Set(products.map(p => p.category).filter(Boolean))].map(cat => (
+                      <SelectItem key={cat} value={cat as string}>
+                        {cat}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -382,7 +382,7 @@ export function QuotationBuilder({
                           <p className="text-sm text-success">{formatPrice(product.unitPrice)}</p>
                           {product.category && (
                             <p className="text-xs text-muted-foreground">
-                              {PRODUCT_CATEGORIES.find(c => c.value === product.category)?.label}
+                              {product.category}
                             </p>
                           )}
                         </div>
