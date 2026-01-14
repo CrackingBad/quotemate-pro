@@ -12,6 +12,14 @@ export interface QuotationItem {
   quantity: number;
 }
 
+export interface CompanyInfo {
+  name: string;
+  logo?: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
 export interface SavedQuotation {
   id: string;
   customerName: string;
@@ -19,6 +27,7 @@ export interface SavedQuotation {
   discount: number;
   subtotal: number;
   total: number;
+  companyInfo?: CompanyInfo;
   createdAt: Date;
 }
 
@@ -33,3 +42,10 @@ export const UNIT_TYPES = [
   { value: 'roll', label: 'Roll' },
   { value: 'sqm', label: 'Square Meter' },
 ] as const;
+
+export const DEFAULT_COMPANY_INFO: CompanyInfo = {
+  name: 'Your Company Name',
+  address: '123 Business Street, City, Country',
+  phone: '+1 (555) 123-4567',
+  email: 'contact@yourcompany.com',
+};

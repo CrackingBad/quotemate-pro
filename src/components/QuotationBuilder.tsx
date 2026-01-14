@@ -1,29 +1,36 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Product, QuotationItem, UNIT_TYPES } from '@/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Product, QuotationItem, CompanyInfo, UNIT_TYPES } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { downloadQuotationPDF } from '@/lib/pdf';
+import { CompanySettings } from './CompanySettings';
 
 interface QuotationBuilderProps {
   products: Product[];
+  companyInfo: CompanyInfo;
+  onUpdateCompanyInfo: (updates: Partial<CompanyInfo>) => void;
   onSave: (quotation: {
     customerName: string;
     items: QuotationItem[];
     discount: number;
     subtotal: number;
     total: number;
+    companyInfo: CompanyInfo;
   }) => void;
 }
 
-export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
+export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, onSave }: QuotationBuilderProps) {
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [customerName, setCustomerName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showProductPicker, setShowProductPicker] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -36,19 +43,47 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
     }).format(price);
   };
 
-  const addItem = (product: Product) => {
-    const existing = items.find(i => i.product.id === product.id);
-    if (existing) {
-      setItems(items.map(i =>
-        i.product.id === product.id
-          ? { ...i, quantity: i.quantity + 1 }
-          : i
-      ));
-    } else {
-      setItems([...items, { product, quantity: 1 }]);
-    }
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  const addSelectedProducts = () => {
+    const productsToAdd = products.filter(p => selectedProducts.has(p.id));
+    
+    setItems(prevItems => {
+      const newItems = [...prevItems];
+      
+      productsToAdd.forEach(product => {
+        const existingIndex = newItems.findIndex(i => i.product.id === product.id);
+        if (existingIndex >= 0) {
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: newItems[existingIndex].quantity + 1
+          };
+        } else {
+          newItems.push({ product, quantity: 1 });
+        }
+      });
+      
+      return newItems;
+    });
+
+    setSelectedProducts(new Set());
     setShowProductPicker(false);
     setSearchQuery('');
+    
+    toast({
+      title: 'Products added',
+      description: `Added ${productsToAdd.length} product(s) to quotation.`,
+    });
   };
 
   const updateQuantity = (productId: string, delta: number) => {
@@ -100,6 +135,7 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
       discount,
       subtotal,
       total,
+      companyInfo,
     });
 
     setItems([]);
@@ -108,6 +144,38 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
     toast({
       title: 'Quotation saved',
       description: 'The quotation has been saved to your archive.',
+    });
+  };
+
+  const handleExportPDF = () => {
+    if (!customerName.trim()) {
+      toast({
+        title: 'Customer name required',
+        description: 'Please enter a customer name to export the quotation.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (items.length === 0) {
+      toast({
+        title: 'No items',
+        description: 'Add at least one product to export.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    downloadQuotationPDF({
+      customerName: customerName.trim(),
+      items,
+      discount,
+      subtotal,
+      total,
+    }, companyInfo);
+
+    toast({
+      title: 'PDF exported',
+      description: 'Quotation has been downloaded as PDF.',
     });
   };
 
@@ -123,17 +191,24 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
           <h2 className="text-2xl font-bold text-foreground">New Quotation</h2>
           <p className="text-muted-foreground">Build and customize your price quotation</p>
         </div>
-        <div className="flex gap-2">
-          <Dialog open={showProductPicker} onOpenChange={setShowProductPicker}>
+        <div className="flex gap-2 flex-wrap">
+          <CompanySettings companyInfo={companyInfo} onUpdate={onUpdateCompanyInfo} />
+          <Dialog open={showProductPicker} onOpenChange={(open) => {
+            setShowProductPicker(open);
+            if (!open) {
+              setSelectedProducts(new Set());
+              setSearchQuery('');
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Product
+                Add Products
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Select Product</DialogTitle>
+                <DialogTitle>Select Products</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="relative">
@@ -150,17 +225,24 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
                     <p className="text-center text-muted-foreground py-4">No products found</p>
                   ) : (
                     filteredProducts.map(product => (
-                      <button
+                      <label
                         key={product.id}
-                        onClick={() => addItem(product)}
-                        className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors text-left"
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedProducts.has(product.id) 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'hover:bg-accent'
+                        }`}
                       >
-                        <div className="w-12 h-12 bg-muted rounded-md overflow-hidden flex-shrink-0">
+                        <Checkbox
+                          checked={selectedProducts.has(product.id)}
+                          onCheckedChange={() => toggleProductSelection(product.id)}
+                        />
+                        <div className="w-10 h-10 bg-muted rounded-md overflow-hidden flex-shrink-0">
                           {product.imageUrl ? (
                             <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                              <ShoppingCart className="w-5 h-5" />
+                              <ShoppingCart className="w-4 h-4" />
                             </div>
                           )}
                         </div>
@@ -168,12 +250,26 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
                           <p className="font-medium truncate">{product.name}</p>
                           <p className="text-sm text-success">{formatPrice(product.unitPrice)}</p>
                         </div>
-                        <Plus className="w-5 h-5 text-muted-foreground" />
-                      </button>
+                      </label>
                     ))
                   )}
                 </div>
               </div>
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowProductPicker(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={addSelectedProducts}
+                  disabled={selectedProducts.size === 0}
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Add {selectedProducts.size > 0 ? `(${selectedProducts.size})` : ''}
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
@@ -193,7 +289,13 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
 
       {/* Print Header */}
       <div className="print-only text-center pb-6 border-b mb-6">
-        <h1 className="text-3xl font-bold">Price Quotation</h1>
+        {companyInfo.logo && (
+          <img src={companyInfo.logo} alt="Company Logo" className="h-16 mx-auto mb-4 object-contain" />
+        )}
+        <h1 className="text-2xl font-bold">{companyInfo.name}</h1>
+        <p className="text-sm text-muted-foreground">{companyInfo.address}</p>
+        <p className="text-sm text-muted-foreground">Phone: {companyInfo.phone} | Email: {companyInfo.email}</p>
+        <h2 className="text-3xl font-bold mt-6">Price Quotation</h2>
         {customerName && <p className="text-lg mt-2">Customer: {customerName}</p>}
         <p className="text-muted-foreground mt-1">Date: {new Date().toLocaleDateString()}</p>
       </div>
@@ -341,6 +443,10 @@ export function QuotationBuilder({ products, onSave }: QuotationBuilderProps) {
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-2" />
             Print
+          </Button>
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileDown className="w-4 h-4 mr-2" />
+            Export PDF
           </Button>
           <Button onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
