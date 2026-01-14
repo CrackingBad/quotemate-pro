@@ -26,10 +26,10 @@ interface ArchiveViewProps {
 export function ArchiveView({ quotations, companyInfo, onDelete }: ArchiveViewProps) {
   const [viewingQuotation, setViewingQuotation] = useState<SavedQuotation | null>(null);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
     }).format(price);
   };
 
@@ -45,7 +45,7 @@ export function ArchiveView({ quotations, companyInfo, onDelete }: ArchiveViewPr
 
   const handleDownloadPDF = (quotation: SavedQuotation) => {
     const savedCompanyInfo = quotation.companyInfo || companyInfo;
-    downloadQuotationPDF(quotation, savedCompanyInfo);
+    downloadQuotationPDF(quotation, savedCompanyInfo, quotation.currency || 'USD');
     toast({
       title: 'PDF downloaded',
       description: 'Quotation has been downloaded as PDF.',
@@ -106,10 +106,10 @@ export function ArchiveView({ quotations, companyInfo, onDelete }: ArchiveViewPr
             </div>
 
             <div className="text-right">
-              <p className="text-2xl font-bold text-success">{formatPrice(quotation.total)}</p>
+              <p className="text-2xl font-bold text-success">{formatPrice(quotation.total, quotation.currency)}</p>
               {quotation.discount > 0 && (
                 <p className="text-sm text-muted-foreground line-through">
-                  {formatPrice(quotation.subtotal)}
+                  {formatPrice(quotation.subtotal, quotation.currency)}
                 </p>
               )}
             </div>

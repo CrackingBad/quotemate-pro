@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search, Package, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Product } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Product, PRODUCT_CATEGORIES } from '@/types';
 import { ProductForm } from './ProductForm';
 import { ProductCard } from './ProductCard';
 
@@ -14,10 +15,18 @@ interface ProductsViewProps {
 
 export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const categoryCounts = PRODUCT_CATEGORIES.reduce((acc, cat) => {
+    acc[cat.value] = products.filter(p => p.category === cat.value).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="space-y-6">
@@ -29,15 +38,33 @@ export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsVi
         <ProductForm onSubmit={onAdd} />
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          className="pl-10 max-w-sm"
-        />
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {PRODUCT_CATEGORIES.map(cat => (
+                <SelectItem key={cat.value} value={cat.value}>
+                  {cat.label} ({categoryCounts[cat.value] || 0})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {filteredProducts.length === 0 ? (
