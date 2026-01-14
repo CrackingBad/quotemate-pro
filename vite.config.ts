@@ -5,6 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // ADD THIS LINE: It must start and end with a forward slash /
+  base: "/quotemate-pro/", 
+
   server: {
     host: "::",
     port: 8080,
