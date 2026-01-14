@@ -1,12 +1,46 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import { Header } from '@/components/Header';
+import { ProductsView } from '@/components/ProductsView';
+import { QuotationBuilder } from '@/components/QuotationBuilder';
+import { ArchiveView } from '@/components/ArchiveView';
+import { useProducts } from '@/hooks/useProducts';
+import { useQuotations } from '@/hooks/useQuotations';
+
+type TabType = 'products' | 'quotation' | 'archive';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('products');
+  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { quotations, saveQuotation, deleteQuotation } = useQuotations();
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header activeTab={activeTab} onTabChange={setActiveTab} />
+      
+      <main className="container mx-auto px-4 py-8">
+        {activeTab === 'products' && (
+          <ProductsView
+            products={products}
+            onAdd={addProduct}
+            onUpdate={updateProduct}
+            onDelete={deleteProduct}
+          />
+        )}
+
+        {activeTab === 'quotation' && (
+          <QuotationBuilder
+            products={products}
+            onSave={saveQuotation}
+          />
+        )}
+
+        {activeTab === 'archive' && (
+          <ArchiveView
+            quotations={quotations}
+            onDelete={deleteQuotation}
+          />
+        )}
+      </main>
     </div>
   );
 };
