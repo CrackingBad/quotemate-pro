@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { FileText, Trash2, Eye, Calendar, User, Package, Percent } from 'lucide-react';
+import { FileText, Trash2, Eye, Calendar, User, Package, Percent, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { SavedQuotation, UNIT_TYPES } from '@/types';
+import { SavedQuotation, CompanyInfo, UNIT_TYPES, DEFAULT_COMPANY_INFO } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -14,13 +14,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { downloadQuotationPDF } from '@/lib/pdf';
+import { toast } from '@/hooks/use-toast';
 
 interface ArchiveViewProps {
   quotations: SavedQuotation[];
+  companyInfo: CompanyInfo;
   onDelete: (id: string) => void;
 }
 
-export function ArchiveView({ quotations, onDelete }: ArchiveViewProps) {
+export function ArchiveView({ quotations, companyInfo, onDelete }: ArchiveViewProps) {
   const [viewingQuotation, setViewingQuotation] = useState<SavedQuotation | null>(null);
 
   const formatPrice = (price: number) => {
@@ -38,6 +41,15 @@ export function ArchiveView({ quotations, onDelete }: ArchiveViewProps) {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(date));
+  };
+
+  const handleDownloadPDF = (quotation: SavedQuotation) => {
+    const savedCompanyInfo = quotation.companyInfo || companyInfo;
+    downloadQuotationPDF(quotation, savedCompanyInfo);
+    toast({
+      title: 'PDF downloaded',
+      description: 'Quotation has been downloaded as PDF.',
+    });
   };
 
   if (quotations.length === 0) {
@@ -111,6 +123,15 @@ export function ArchiveView({ quotations, onDelete }: ArchiveViewProps) {
               >
                 <Eye className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">View</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleDownloadPDF(quotation)}
+                className="flex-1 sm:flex-auto"
+              >
+                <FileDown className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">PDF</span>
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -212,6 +233,13 @@ export function ArchiveView({ quotations, onDelete }: ArchiveViewProps) {
                     <span className="text-success">{formatPrice(viewingQuotation.total)}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={() => handleDownloadPDF(viewingQuotation)}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Download PDF
+                </Button>
               </div>
             </div>
           )}
