@@ -3,6 +3,7 @@ export interface Product {
   name: string;
   unitPrice: number;
   unitType: string;
+  category?: string;
   imageUrl?: string;
   createdAt: Date;
 }
@@ -20,6 +21,20 @@ export interface CompanyInfo {
   email: string;
 }
 
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
+export interface QuotationTemplate {
+  id: string;
+  name: string;
+  discount: number;
+  items: { productId: string; quantity: number }[];
+  createdAt: Date;
+}
+
 export interface SavedQuotation {
   id: string;
   customerName: string;
@@ -27,6 +42,7 @@ export interface SavedQuotation {
   discount: number;
   subtotal: number;
   total: number;
+  currency: string;
   companyInfo?: CompanyInfo;
   createdAt: Date;
 }
@@ -41,6 +57,32 @@ export const UNIT_TYPES = [
   { value: 'pack', label: 'Pack' },
   { value: 'roll', label: 'Roll' },
   { value: 'sqm', label: 'Square Meter' },
+] as const;
+
+export const CURRENCIES: Currency[] = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'PHP', symbol: '₱', name: 'Philippine Peso' },
+  { code: 'SAR', symbol: 'ر.س', name: 'Saudi Riyal' },
+  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
+];
+
+export const PRODUCT_CATEGORIES = [
+  { value: 'electronics', label: 'Electronics' },
+  { value: 'furniture', label: 'Furniture' },
+  { value: 'clothing', label: 'Clothing' },
+  { value: 'food', label: 'Food & Beverages' },
+  { value: 'tools', label: 'Tools & Equipment' },
+  { value: 'materials', label: 'Raw Materials' },
+  { value: 'services', label: 'Services' },
+  { value: 'other', label: 'Other' },
 ] as const;
 
 export const DEFAULT_COMPANY_INFO: CompanyInfo = {

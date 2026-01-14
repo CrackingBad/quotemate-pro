@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check, Coins, BookTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Product, QuotationItem, CompanyInfo, UNIT_TYPES } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Product, QuotationItem, CompanyInfo, QuotationTemplate, UNIT_TYPES, CURRENCIES, PRODUCT_CATEGORIES } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
 import { downloadQuotationPDF } from '@/lib/pdf';
@@ -13,33 +14,53 @@ import { CompanySettings } from './CompanySettings';
 interface QuotationBuilderProps {
   products: Product[];
   companyInfo: CompanyInfo;
+  templates: QuotationTemplate[];
   onUpdateCompanyInfo: (updates: Partial<CompanyInfo>) => void;
+  onSaveTemplate: (template: Omit<QuotationTemplate, 'id' | 'createdAt'>) => void;
+  onDeleteTemplate: (id: string) => void;
   onSave: (quotation: {
     customerName: string;
     items: QuotationItem[];
     discount: number;
     subtotal: number;
     total: number;
+    currency: string;
     companyInfo: CompanyInfo;
   }) => void;
 }
 
-export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, onSave }: QuotationBuilderProps) {
+export function QuotationBuilder({ 
+  products, 
+  companyInfo, 
+  templates,
+  onUpdateCompanyInfo, 
+  onSaveTemplate,
+  onDeleteTemplate,
+  onSave 
+}: QuotationBuilderProps) {
   const [items, setItems] = useState<QuotationItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [customerName, setCustomerName] = useState('');
+  const [currency, setCurrency] = useState('USD');
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
 
-  const filteredProducts = products.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const formatPrice = (price: number) => {
+    const currencyInfo = CURRENCIES.find(c => c.code === currency);
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
     }).format(price);
   };
 
@@ -79,6 +100,7 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
     setSelectedProducts(new Set());
     setShowProductPicker(false);
     setSearchQuery('');
+    setCategoryFilter('all');
     
     toast({
       title: 'Products added',
@@ -135,6 +157,7 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
       discount,
       subtotal,
       total,
+      currency,
       companyInfo,
     });
 
@@ -144,6 +167,55 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
     toast({
       title: 'Quotation saved',
       description: 'The quotation has been saved to your archive.',
+    });
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!templateName.trim()) {
+      toast({
+        title: 'Template name required',
+        description: 'Please enter a name for the template.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (items.length === 0) {
+      toast({
+        title: 'No items',
+        description: 'Add at least one product to save as template.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    onSaveTemplate({
+      name: templateName.trim(),
+      discount,
+      items: items.map(i => ({ productId: i.product.id, quantity: i.quantity })),
+    });
+
+    setTemplateName('');
+    setShowSaveTemplate(false);
+    toast({
+      title: 'Template saved',
+      description: 'Quotation template has been saved.',
+    });
+  };
+
+  const loadTemplate = (template: QuotationTemplate) => {
+    const templateItems: QuotationItem[] = [];
+    template.items.forEach(ti => {
+      const product = products.find(p => p.id === ti.productId);
+      if (product) {
+        templateItems.push({ product, quantity: ti.quantity });
+      }
+    });
+    setItems(templateItems);
+    setDiscount(template.discount);
+    setShowTemplates(false);
+    toast({
+      title: 'Template loaded',
+      description: `Loaded template "${template.name}".`,
     });
   };
 
@@ -171,7 +243,7 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
       discount,
       subtotal,
       total,
-    }, companyInfo);
+    }, companyInfo, currency);
 
     toast({
       title: 'PDF exported',
@@ -193,11 +265,57 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
         </div>
         <div className="flex gap-2 flex-wrap">
           <CompanySettings companyInfo={companyInfo} onUpdate={onUpdateCompanyInfo} />
+          
+          {/* Templates Button */}
+          <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <BookTemplate className="w-4 h-4 mr-2" />
+                Templates
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Quotation Templates</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {templates.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No templates saved yet</p>
+                ) : (
+                  templates.map(template => (
+                    <div key={template.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{template.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {template.items.length} items • {template.discount}% discount
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => loadTemplate(template)}>
+                          Load
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-destructive"
+                          onClick={() => onDeleteTemplate(template.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={showProductPicker} onOpenChange={(open) => {
             setShowProductPicker(open);
             if (!open) {
               setSelectedProducts(new Set());
               setSearchQuery('');
+              setCategoryFilter('all');
             }
           }}>
             <DialogTrigger asChild>
@@ -220,6 +338,19 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
                     className="pl-10"
                   />
                 </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    {PRODUCT_CATEGORIES.map(cat => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="max-h-64 overflow-y-auto space-y-2">
                   {filteredProducts.length === 0 ? (
                     <p className="text-center text-muted-foreground py-4">No products found</p>
@@ -249,6 +380,11 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{product.name}</p>
                           <p className="text-sm text-success">{formatPrice(product.unitPrice)}</p>
+                          {product.category && (
+                            <p className="text-xs text-muted-foreground">
+                              {PRODUCT_CATEGORIES.find(c => c.value === product.category)?.label}
+                            </p>
+                          )}
                         </div>
                       </label>
                     ))
@@ -275,16 +411,36 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
         </div>
       </div>
 
-      {/* Customer Name */}
+      {/* Customer Name and Currency */}
       <div className="bg-card border rounded-lg p-4 no-print">
-        <Label htmlFor="customerName">Customer Name</Label>
-        <Input
-          id="customerName"
-          value={customerName}
-          onChange={e => setCustomerName(e.target.value)}
-          placeholder="Enter customer name"
-          className="mt-2 max-w-sm"
-        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="customerName">Customer Name</Label>
+            <Input
+              id="customerName"
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+              placeholder="Enter customer name"
+              className="mt-2"
+            />
+          </div>
+          <div>
+            <Label htmlFor="currency">Currency</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger className="mt-2">
+                <Coins className="w-4 h-4 mr-2" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map(curr => (
+                  <SelectItem key={curr.code} value={curr.code}>
+                    {curr.symbol} {curr.code} - {curr.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       {/* Print Header */}
@@ -440,6 +596,39 @@ export function QuotationBuilder({ products, companyInfo, onUpdateCompanyInfo, o
       {/* Actions */}
       {items.length > 0 && (
         <div className="flex flex-wrap gap-3 justify-end no-print">
+          <Dialog open={showSaveTemplate} onOpenChange={setShowSaveTemplate}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <BookTemplate className="w-4 h-4 mr-2" />
+                Save as Template
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Save as Template</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="templateName">Template Name</Label>
+                  <Input
+                    id="templateName"
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
+                    placeholder="Enter template name"
+                    className="mt-2"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowSaveTemplate(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveAsTemplate}>
+                  Save Template
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-2" />
             Print

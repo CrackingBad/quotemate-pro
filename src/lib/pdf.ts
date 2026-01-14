@@ -2,10 +2,10 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { SavedQuotation, QuotationItem, CompanyInfo, UNIT_TYPES } from '@/types';
 
-const formatPrice = (price: number) => {
+const formatPrice = (price: number, currency: string = 'USD') => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: currency,
   }).format(price);
 };
 
@@ -17,7 +17,8 @@ export function generateQuotationPDF(
     subtotal: number;
     total: number;
   },
-  companyInfo: CompanyInfo
+  companyInfo: CompanyInfo,
+  currency: string = 'USD'
 ): jsPDF {
   const doc = new jsPDF();
 
@@ -33,17 +34,17 @@ export function generateQuotationPDF(
   doc.text(`Phone: ${companyInfo.phone}`, 20, 39);
   doc.text(`Email: ${companyInfo.email}`, 20, 45);
 
-  // Quotation Title
-  doc.setFontSize(24);
+  // Quotation Title - positioned to fit within page
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(31, 78, 121);
-  doc.text('PRICE QUOTATION', 140, 25);
+  doc.setTextColor(176, 31, 46); // #B01F2E
+  doc.text('PRICE QUOTATION', 190, 25, { align: 'right' });
 
   // Date
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 140, 35);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 190, 33, { align: 'right' });
 
   // Customer Info
   doc.setFontSize(12);
@@ -58,9 +59,9 @@ export function generateQuotationPDF(
     const unitLabel = UNIT_TYPES.find(u => u.value === item.product.unitType)?.label || item.product.unitType;
     return [
       item.product.name,
-      `${formatPrice(item.product.unitPrice)} / ${unitLabel}`,
+      `${formatPrice(item.product.unitPrice, currency)} / ${unitLabel}`,
       item.quantity.toString(),
-      formatPrice(item.product.unitPrice * item.quantity),
+      formatPrice(item.product.unitPrice * item.quantity, currency),
     ];
   });
 
@@ -70,7 +71,7 @@ export function generateQuotationPDF(
     body: tableData,
     theme: 'striped',
     headStyles: {
-      fillColor: [31, 78, 121],
+      fillColor: [176, 31, 46], // #B01F2E
       textColor: 255,
       fontStyle: 'bold',
     },
@@ -94,21 +95,21 @@ export function generateQuotationPDF(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text('Subtotal:', totalsX, finalY);
-  doc.text(formatPrice(quotation.subtotal), 185, finalY, { align: 'right' });
+  doc.text(formatPrice(quotation.subtotal, currency), 185, finalY, { align: 'right' });
 
   if (quotation.discount > 0) {
     doc.setTextColor(200, 0, 0);
     doc.text(`Discount (${quotation.discount}%):`, totalsX, finalY + 7);
-    doc.text(`-${formatPrice(quotation.subtotal - quotation.total)}`, 185, finalY + 7, { align: 'right' });
+    doc.text(`-${formatPrice(quotation.subtotal - quotation.total, currency)}`, 185, finalY + 7, { align: 'right' });
     doc.setTextColor(0);
   }
 
   const totalY = quotation.discount > 0 ? finalY + 17 : finalY + 10;
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(31, 78, 121);
+  doc.setTextColor(176, 31, 46); // #B01F2E
   doc.text('Total:', totalsX, totalY);
-  doc.text(formatPrice(quotation.total), 185, totalY, { align: 'right' });
+  doc.text(formatPrice(quotation.total, currency), 185, totalY, { align: 'right' });
 
   // Footer
   doc.setFontSize(9);
@@ -128,9 +129,10 @@ export function downloadQuotationPDF(
     total: number;
   },
   companyInfo: CompanyInfo,
+  currency: string = 'USD',
   filename?: string
 ) {
-  const doc = generateQuotationPDF(quotation, companyInfo);
+  const doc = generateQuotationPDF(quotation, companyInfo, currency);
   const name = filename || `quotation-${quotation.customerName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
   doc.save(name);
 }

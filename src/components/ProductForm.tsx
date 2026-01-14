@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Product, UNIT_TYPES } from '@/types';
+import { Product, UNIT_TYPES, PRODUCT_CATEGORIES } from '@/types';
 import { uploadProductImage } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
 
@@ -21,6 +21,7 @@ export function ProductForm({ onSubmit, editProduct, onClose }: ProductFormProps
   const [name, setName] = useState(editProduct?.name || '');
   const [unitPrice, setUnitPrice] = useState(editProduct?.unitPrice?.toString() || '');
   const [unitType, setUnitType] = useState(editProduct?.unitType || 'piece');
+  const [category, setCategory] = useState(editProduct?.category || '');
   const [imageUrl, setImageUrl] = useState(editProduct?.imageUrl || '');
   const [imageSource, setImageSource] = useState<'url' | 'upload'>('upload');
   const [uploading, setUploading] = useState(false);
@@ -34,6 +35,7 @@ export function ProductForm({ onSubmit, editProduct, onClose }: ProductFormProps
       name: name.trim(),
       unitPrice: parseFloat(unitPrice),
       unitType,
+      category: category || undefined,
       imageUrl: imageUrl.trim() || undefined,
     });
 
@@ -41,6 +43,7 @@ export function ProductForm({ onSubmit, editProduct, onClose }: ProductFormProps
       setName('');
       setUnitPrice('');
       setUnitType('piece');
+      setCategory('');
       setImageUrl('');
     }
     setOpen(false);
@@ -151,6 +154,22 @@ export function ProductForm({ onSubmit, editProduct, onClose }: ProductFormProps
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="category">Category (optional)</Label>
+        <Select value={category} onValueChange={setCategory}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            {PRODUCT_CATEGORIES.map(cat => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

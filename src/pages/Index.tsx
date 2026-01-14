@@ -6,6 +6,7 @@ import { ArchiveView } from '@/components/ArchiveView';
 import { useProducts } from '@/hooks/useProducts';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useCompanyInfo } from '@/hooks/useCompanyInfo';
+import { useTemplates } from '@/hooks/useTemplates';
 
 type TabType = 'products' | 'quotation' | 'archive';
 
@@ -14,6 +15,7 @@ const Index = () => {
   const { products, addProduct, updateProduct, deleteProduct } = useProducts();
   const { quotations, saveQuotation, deleteQuotation } = useQuotations();
   const { companyInfo, updateCompanyInfo } = useCompanyInfo();
+  const { templates, saveTemplate, deleteTemplate } = useTemplates();
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,7 +35,10 @@ const Index = () => {
           <QuotationBuilder
             products={products}
             companyInfo={companyInfo}
+            templates={templates}
             onUpdateCompanyInfo={updateCompanyInfo}
+            onSaveTemplate={saveTemplate}
+            onDeleteTemplate={deleteTemplate}
             onSave={saveQuotation}
           />
         )}
