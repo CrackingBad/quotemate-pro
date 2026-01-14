@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, Package, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Product, PRODUCT_CATEGORIES } from '@/types';
+import { Product } from '@/types';
 import { ProductForm } from './ProductForm';
 import { ProductCard } from './ProductCard';
 
@@ -11,9 +11,11 @@ interface ProductsViewProps {
   onAdd: (product: Omit<Product, 'id' | 'createdAt'>) => void;
   onUpdate: (id: string, updates: Partial<Omit<Product, 'id' | 'createdAt'>>) => void;
   onDelete: (id: string) => void;
+  categories: string[];
+  onAddCategory: (category: string) => boolean;
 }
 
-export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsViewProps) {
+export function ProductsView({ products, onAdd, onUpdate, onDelete, categories, onAddCategory }: ProductsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
@@ -23,8 +25,12 @@ export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsVi
     return matchesSearch && matchesCategory;
   });
 
-  const categoryCounts = PRODUCT_CATEGORIES.reduce((acc, cat) => {
-    acc[cat.value] = products.filter(p => p.category === cat.value).length;
+  // Get unique categories from products that exist
+  const usedCategories = [...new Set(products.map(p => p.category).filter(Boolean))] as string[];
+  const allCategories = [...new Set([...categories, ...usedCategories])];
+
+  const categoryCounts = allCategories.reduce((acc, cat) => {
+    acc[cat] = products.filter(p => p.category === cat).length;
     return acc;
   }, {} as Record<string, number>);
 
@@ -35,7 +41,7 @@ export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsVi
           <h2 className="text-2xl font-bold text-foreground">Products</h2>
           <p className="text-muted-foreground">{products.length} products in catalog</p>
         </div>
-        <ProductForm onSubmit={onAdd} />
+        <ProductForm onSubmit={onAdd} categories={categories} onAddCategory={onAddCategory} />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -52,14 +58,14 @@ export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsVi
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-48">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All categories</SelectItem>
-              {PRODUCT_CATEGORIES.map(cat => (
-                <SelectItem key={cat.value} value={cat.value}>
-                  {cat.label} ({categoryCounts[cat.value] || 0})
+              {allCategories.map(cat => (
+                <SelectItem key={cat} value={cat}>
+                  {cat} ({categoryCounts[cat] || 0})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -87,6 +93,8 @@ export function ProductsView({ products, onAdd, onUpdate, onDelete }: ProductsVi
               product={product}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              categories={categories}
+              onAddCategory={onAddCategory}
             />
           ))}
         </div>

@@ -60,6 +60,7 @@ export const UNIT_TYPES = [
 ] as const;
 
 export const CURRENCIES: Currency[] = [
+  { code: 'EGP', symbol: 'L.E', name: 'Egyptian Pound' },
   { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'EUR', symbol: '€', name: 'Euro' },
   { code: 'GBP', symbol: '£', name: 'British Pound' },
@@ -73,17 +74,6 @@ export const CURRENCIES: Currency[] = [
   { code: 'SAR', symbol: 'ر.س', name: 'Saudi Riyal' },
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
 ];
-
-export const PRODUCT_CATEGORIES = [
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'furniture', label: 'Furniture' },
-  { value: 'clothing', label: 'Clothing' },
-  { value: 'food', label: 'Food & Beverages' },
-  { value: 'tools', label: 'Tools & Equipment' },
-  { value: 'materials', label: 'Raw Materials' },
-  { value: 'services', label: 'Services' },
-  { value: 'other', label: 'Other' },
-] as const;
 
 export const DEFAULT_COMPANY_INFO: CompanyInfo = {
   name: 'Your Company Name',

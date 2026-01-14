@@ -7,6 +7,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useQuotations } from '@/hooks/useQuotations';
 import { useCompanyInfo } from '@/hooks/useCompanyInfo';
 import { useTemplates } from '@/hooks/useTemplates';
+import { useCategories } from '@/hooks/useCategories';
 
 type TabType = 'products' | 'quotation' | 'archive';
 
@@ -16,6 +17,7 @@ const Index = () => {
   const { quotations, saveQuotation, deleteQuotation } = useQuotations();
   const { companyInfo, updateCompanyInfo } = useCompanyInfo();
   const { templates, saveTemplate, deleteTemplate } = useTemplates();
+  const { categories, addCategory } = useCategories();
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,6 +30,8 @@ const Index = () => {
             onAdd={addProduct}
             onUpdate={updateProduct}
             onDelete={deleteProduct}
+            categories={categories}
+            onAddCategory={addCategory}
           />
         )}
 
