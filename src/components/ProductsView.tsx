@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Product } from '@/types';
 import { ProductForm } from './ProductForm';
 import { ProductCard } from './ProductCard';
+import { CategorySettings } from './CategorySettings';
 
 interface ProductsViewProps {
   products: Product[];
@@ -13,9 +14,20 @@ interface ProductsViewProps {
   onDelete: (id: string) => void;
   categories: string[];
   onAddCategory: (category: string) => boolean;
+  onRemoveCategory: (category: string) => void;
+  productCountByCategory: Record<string, number>;
 }
 
-export function ProductsView({ products, onAdd, onUpdate, onDelete, categories, onAddCategory }: ProductsViewProps) {
+export function ProductsView({ 
+  products, 
+  onAdd, 
+  onUpdate, 
+  onDelete, 
+  categories, 
+  onAddCategory,
+  onRemoveCategory,
+  productCountByCategory 
+}: ProductsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
@@ -41,7 +53,15 @@ export function ProductsView({ products, onAdd, onUpdate, onDelete, categories, 
           <h2 className="text-2xl font-bold text-foreground">Products</h2>
           <p className="text-muted-foreground">{products.length} products in catalog</p>
         </div>
-        <ProductForm onSubmit={onAdd} categories={categories} onAddCategory={onAddCategory} />
+        <div className="flex gap-2">
+          <CategorySettings 
+            categories={categories}
+            onAddCategory={onAddCategory}
+            onRemoveCategory={onRemoveCategory}
+            productCountByCategory={productCountByCategory}
+          />
+          <ProductForm onSubmit={onAdd} categories={categories} onAddCategory={onAddCategory} />
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">

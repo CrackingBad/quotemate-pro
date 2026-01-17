@@ -17,7 +17,13 @@ const Index = () => {
   const { quotations, saveQuotation, deleteQuotation } = useQuotations();
   const { companyInfo, updateCompanyInfo } = useCompanyInfo();
   const { templates, saveTemplate, deleteTemplate } = useTemplates();
-  const { categories, addCategory } = useCategories();
+  const { categories, addCategory, removeCategory } = useCategories();
+
+  // Calculate product count per category
+  const productCountByCategory = categories.reduce((acc, cat) => {
+    acc[cat] = products.filter(p => p.category === cat).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,6 +38,8 @@ const Index = () => {
             onDelete={deleteProduct}
             categories={categories}
             onAddCategory={addCategory}
+            onRemoveCategory={removeCategory}
+            productCountByCategory={productCountByCategory}
           />
         )}
 

@@ -9,7 +9,23 @@ const formatPrice = (price: number, currency: string = 'USD') => {
   }).format(price);
 };
 
-export function generateQuotationPDF(
+// Convert image URL to base64 for PDF embedding
+const getImageBase64 = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+};
+
+export async function generateQuotationPDF(
   quotation: {
     customerName: string;
     items: QuotationItem[];
@@ -19,40 +35,57 @@ export function generateQuotationPDF(
   },
   companyInfo: CompanyInfo,
   currency: string = 'USD'
-): jsPDF {
+): Promise<jsPDF> {
   const doc = new jsPDF();
+  let startY = 25;
 
-  // Company Header
+  // Add company logo if exists
+  if (companyInfo.logo) {
+    const logoBase64 = await getImageBase64(companyInfo.logo);
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'JPEG', 20, 10, 30, 30);
+        startY = 20;
+      } catch {
+        // Logo failed to load, continue without it
+      }
+    }
+  }
+
+  // Company Header - offset if logo exists
+  const textStartX = companyInfo.logo ? 55 : 20;
+  
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text(companyInfo.name, 20, 25);
+  doc.text(companyInfo.name, textStartX, startY);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100);
-  doc.text(companyInfo.address, 20, 33);
-  doc.text(`Phone: ${companyInfo.phone}`, 20, 39);
-  doc.text(`Email: ${companyInfo.email}`, 20, 45);
+  doc.text(companyInfo.address, textStartX, startY + 8);
+  doc.text(`Phone: ${companyInfo.phone}`, textStartX, startY + 14);
+  doc.text(`Email: ${companyInfo.email}`, textStartX, startY + 20);
 
   // Quotation Title - positioned to fit within page
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(176, 31, 46); // #B01F2E
-  doc.text('PRICE QUOTATION', 190, 25, { align: 'right' });
+  doc.text('PRICE QUOTATION', 190, startY, { align: 'right' });
 
   // Date
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, 190, 33, { align: 'right' });
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, 190, startY + 8, { align: 'right' });
 
   // Customer Info
+  const customerY = companyInfo.logo ? 55 : 60;
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0);
-  doc.text('Customer:', 20, 60);
+  doc.text('Customer:', 20, customerY);
   doc.setFont('helvetica', 'normal');
-  doc.text(quotation.customerName, 50, 60);
+  doc.text(quotation.customerName, 50, customerY);
 
   // Table
   const tableData = quotation.items.map(item => {
@@ -66,7 +99,7 @@ export function generateQuotationPDF(
   });
 
   autoTable(doc, {
-    startY: 70,
+    startY: customerY + 10,
     head: [['Product', 'Unit Price', 'Quantity', 'Total']],
     body: tableData,
     theme: 'striped',
@@ -120,7 +153,7 @@ export function generateQuotationPDF(
   return doc;
 }
 
-export function downloadQuotationPDF(
+export async function downloadQuotationPDF(
   quotation: SavedQuotation | {
     customerName: string;
     items: QuotationItem[];
@@ -132,7 +165,7 @@ export function downloadQuotationPDF(
   currency: string = 'USD',
   filename?: string
 ) {
-  const doc = generateQuotationPDF(quotation, companyInfo, currency);
+  const doc = await generateQuotationPDF(quotation, companyInfo, currency);
   const name = filename || `quotation-${quotation.customerName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
   doc.save(name);
 }
