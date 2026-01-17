@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check, Coins, BookTemplate, Edit2 } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check, Coins, BookTemplate, Edit2, PenLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +50,8 @@ export function QuotationBuilder({
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showCustomItem, setShowCustomItem] = useState(false);
+  const [customItem, setCustomItem] = useState({ name: '', unitPrice: '', unitType: 'piece', quantity: '1' });
 
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -106,6 +108,47 @@ export function QuotationBuilder({
     toast({
       title: 'Products added',
       description: `Added ${productsToAdd.length} product(s) to quotation.`,
+    });
+  };
+
+  const addCustomItem = () => {
+    const name = customItem.name.trim();
+    const price = parseFloat(customItem.unitPrice);
+    const qty = parseInt(customItem.quantity) || 1;
+    
+    if (!name) {
+      toast({
+        title: 'Name required',
+        description: 'Please enter a name for the custom item.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (isNaN(price) || price < 0) {
+      toast({
+        title: 'Invalid price',
+        description: 'Please enter a valid price.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const customProduct: Product = {
+      id: `custom-${Date.now()}`,
+      name,
+      unitPrice: price,
+      unitType: customItem.unitType,
+      createdAt: new Date(),
+    };
+
+    setItems(prev => [...prev, { product: customProduct, quantity: qty }]);
+    setCustomItem({ name: '', unitPrice: '', unitType: 'piece', quantity: '1' });
+    setShowCustomItem(false);
+    
+    toast({
+      title: 'Custom item added',
+      description: `"${name}" has been added to the quotation.`,
     });
   };
 
@@ -414,6 +457,87 @@ export function QuotationBuilder({
                 >
                   <Check className="w-4 h-4 mr-2" />
                   Add {selectedProducts.size > 0 ? `(${selectedProducts.size})` : ''}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Custom Item Dialog */}
+          <Dialog open={showCustomItem} onOpenChange={(open) => {
+            setShowCustomItem(open);
+            if (!open) {
+              setCustomItem({ name: '', unitPrice: '', unitType: 'piece', quantity: '1' });
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <PenLine className="w-4 h-4 mr-2" />
+                Custom Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>Add Custom Item</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Item Name</Label>
+                  <Input
+                    value={customItem.name}
+                    onChange={e => setCustomItem(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter item name"
+                    maxLength={100}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Unit Price</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={customItem.unitPrice}
+                      onChange={e => setCustomItem(prev => ({ ...prev, unitPrice: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Unit Type</Label>
+                    <Select 
+                      value={customItem.unitType} 
+                      onValueChange={v => setCustomItem(prev => ({ ...prev, unitType: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNIT_TYPES.map(unit => (
+                          <SelectItem key={unit.value} value={unit.value}>
+                            {unit.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={customItem.quantity}
+                    onChange={e => setCustomItem(prev => ({ ...prev, quantity: e.target.value }))}
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowCustomItem(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={addCustomItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Item
                 </Button>
               </DialogFooter>
             </DialogContent>
