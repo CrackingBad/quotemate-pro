@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check, Coins, BookTemplate } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Printer, Save, ShoppingCart, FileDown, Check, Coins, BookTemplate, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Product, QuotationItem, CompanyInfo, QuotationTemplate, UNIT_TYPES, CURRENCIES } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
@@ -122,6 +123,15 @@ export function QuotationBuilder({
     if (quantity < 1) return;
     setItems(items.map(i =>
       i.product.id === productId ? { ...i, quantity } : i
+    ));
+  };
+
+  const updateItemPrice = (productId: string, newPrice: number) => {
+    if (newPrice < 0) return;
+    setItems(items.map(i =>
+      i.product.id === productId 
+        ? { ...i, product: { ...i.product, unitPrice: newPrice } } 
+        : i
     ));
   };
 
@@ -502,9 +512,30 @@ export function QuotationBuilder({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center no-print">
-                        <span className="text-muted-foreground">
-                          {formatPrice(item.product.unitPrice)} / {unitLabel}
-                        </span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="text-muted-foreground hover:text-foreground flex items-center gap-1 mx-auto transition-colors">
+                              {formatPrice(item.product.unitPrice)} / {unitLabel}
+                              <Edit2 className="w-3 h-3 opacity-50" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48 p-3">
+                            <div className="space-y-2">
+                              <Label className="text-xs">Unit Price</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                defaultValue={item.product.unitPrice}
+                                onChange={e => {
+                                  const val = parseFloat(e.target.value);
+                                  if (!isNaN(val)) updateItemPrice(item.product.id, val);
+                                }}
+                                className="h-8"
+                              />
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-2">
